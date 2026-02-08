@@ -1,0 +1,62 @@
+services:
+
+  backend:
+    build:
+      context: .
+      dockerfile: Backend/Dockerfile
+    container_name: photoapp-backend
+    expose:
+      - "8080"
+    volumes:
+      - ./photos:/photos
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:8080
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=photoapp;Username=postgres;Password=postgres
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: on-failure
+    networks:
+      - photoapp-network
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: photoapp-frontend
+    ports:
+      - "8444:443"
+    volumes:
+      - ./photos:/photos
+    depends_on:
+      - backend
+    networks:
+      - photoapp-network
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: photoapp-postgres
+    ports:
+      - "5435:5432"
+    environment:
+      - POSTGRES_DB=photoapp
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d photoapp"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - photoapp-network
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  photoapp-network:
+    driver: bridge

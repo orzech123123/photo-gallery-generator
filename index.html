@@ -1,0 +1,554 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8" />
+  <title>Zdjęcia Mai - Aplikacja do zarządzania zdjęciami</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    * {
+      box-sizing: border-box;
+    } 
+    
+    html, body { 
+      height: 100vh; 
+      margin: 0; 
+      padding: 0;
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    
+    h1 {
+      color: white;
+      text-align: center;
+      margin-bottom: 30px;
+      font-size: 2.5em;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    }
+    
+    .album-controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+      padding: 20px;
+      background: white;
+      border-radius: 15px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+    
+    .album-controls h2 {
+      color: #667eea;
+      margin: 0;
+    }
+    
+    .selection-info {
+      color: #667eea;
+      font-weight: 600;
+    }
+    
+    .photo-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 20px;
+      margin-top: 20px;
+    }
+    
+    .photo-item {
+      position: relative;
+      aspect-ratio: 1;
+      border-radius: 10px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+    
+    .photo-item:hover {
+      transform: scale(1.05);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+    }
+    
+    .photo-item img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    
+    .photo-info {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+      color: white;
+      padding: 10px;
+      font-size: 12px;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    
+    .photo-item:hover .photo-info {
+      opacity: 1;
+    }
+    
+    .checkbox-wrapper {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 10;
+    }
+    
+    .checkbox-wrapper input[type="checkbox"] {
+      width: 24px;
+      height: 24px;
+      cursor: pointer;
+    }
+    
+    .album-controls {
+      position: sticky;
+      top: 0;
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      z-index: 100;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .generate-btn {
+      padding: 15px 40px;
+      background: #667eea;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+    
+    .generate-btn:hover:not(:disabled) {
+      background: #5568d3;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+    }
+    
+    .generate-btn:disabled {
+      background: #9ca3af;
+      cursor: not-allowed;
+    }
+    
+    .selection-info {
+      color: #667eea;
+      font-weight: 600;
+      font-size: 16px;
+    }
+    
+    .lightbox {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.95);
+      z-index: 10000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    
+    .lightbox.active {
+      display: flex;
+      opacity: 1;
+    }
+    
+    .lightbox-content {
+      position: relative;
+      max-width: 90%;
+      max-height: 90%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .lightbox-image {
+      max-width: 100%;
+      max-height: 90vh;
+      object-fit: contain;
+      border-radius: 8px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    }
+    
+    .lightbox-close,
+    .lightbox-prev,
+    .lightbox-next {
+      position: absolute;
+      background: rgba(255, 255, 255, 0.9);
+      border: none;
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      font-size: 24px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s ease;
+      z-index: 10001;
+      color: #333;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+    
+    .lightbox-close {
+      top: 20px;
+      right: 20px;
+      font-size: 28px;
+    }
+    
+    .lightbox-prev {
+      left: 20px;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+    
+    .lightbox-next {
+      right: 20px;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+    
+    .lightbox-close:hover,
+    .lightbox-prev:hover,
+    .lightbox-next:hover {
+      background: rgba(255, 255, 255, 1);
+      transform: scale(1.1);
+    }
+    
+    .lightbox-prev:hover,
+    .lightbox-next:hover {
+      transform: translateY(-50%) scale(1.1);
+    }
+    
+    .lightbox-counter {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.7);
+      color: white;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: 500;
+    }
+    
+    .status {
+      margin-top: 15px;
+      padding: 15px;
+      border-radius: 8px;
+      text-align: center;
+      font-weight: 500;
+    }
+    
+    .status.success {
+      background: #d1fae5;
+      color: #065f46;
+    }
+    
+    .status.error {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+    
+    .status.info {
+      background: #dbeafe;
+      color: #1e40af;
+    }
+    
+    .loading {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(255,255,255,.3);
+      border-radius: 50%;
+      border-top-color: white;
+      animation: spin 1s ease-in-out infinite;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #6b7280;
+    }
+    
+    .empty-state svg {
+      width: 100px;
+      height: 100px;
+      margin-bottom: 20px;
+      opacity: 0.5;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📸 Zdjęcia Mai</h1>
+    
+    <div class="album-controls">
+      <div class="selection-info">
+        Wybrano: <span id="selectedCount">0</span> zdjęć
+      </div>
+      <div>
+        <button class="generate-btn" style="margin-right: 10px; background: #ef4444;" onclick="deselectAll()">Odznacz wszystkie</button>
+        <button class="generate-btn" style="margin-right: 10px; background: #10b981;" onclick="selectAll()">Zaznacz wszystkie</button>
+        <button class="generate-btn" id="generateBtn" onclick="generateAlbum()" disabled>Generuj PDF</button>
+      </div>
+    </div>
+    
+    <div id="photoGallery" class="photo-grid"></div>
+  </div>
+  
+  <div id="lightbox" class="lightbox">
+    <div class="lightbox-content">
+      <button class="lightbox-close" onclick="closeLightbox()">&times;</button>
+      <button class="lightbox-prev" onclick="navigateLightbox(-1)">&#10094;</button>
+      <img id="lightbox-image" src="" alt="" class="lightbox-image">
+      <button class="lightbox-next" onclick="navigateLightbox(1)">&#10095;</button>
+      <div class="lightbox-counter" id="lightbox-counter"></div>
+    </div>
+  </div>
+  
+  <script>
+    let API_BASE;
+    if (window.location.protocol === 'file:') {
+      API_BASE = "https://localhost:61588";
+    } else if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      API_BASE = "https://localhost:8444";
+    } else {
+      API_BASE = `https://${window.location.hostname}`;
+    }
+    
+    let allPhotos = [];
+    let currentLightboxIndex = 0;
+    let selectedPhotoIds = new Set();
+    
+    // Initialize app - load photos on startup
+    document.addEventListener('DOMContentLoaded', () => {
+      loadPhotos();
+    });
+    
+    // Load photos from /photos volume
+    async function loadPhotos() {
+      const gallery = document.getElementById('photoGallery');
+      gallery.innerHTML = '<div class="status info">Ładowanie zdjęć...</div>';
+      
+      try {
+        const response = await fetch(`${API_BASE}/api/photos`);
+        if (!response.ok) throw new Error('Błąd ładowania zdjęć');
+        
+        allPhotos = await response.json();
+        
+        if (allPhotos.length === 0) {
+          gallery.innerHTML = `
+            <div class="empty-state">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+              </svg>
+              <h3>Brak zdjęć</h3>
+              <p>Folder /photos jest pusty</p>
+            </div>
+          `;
+          return;
+        }
+        
+        gallery.innerHTML = '';
+        
+        for (const photo of allPhotos) {
+          const photoDiv = document.createElement('div');
+          photoDiv.className = 'photo-item';
+          photoDiv.innerHTML = `
+            <div class="checkbox-wrapper">
+              <input type="checkbox" id="photo-${photo.fileName}" onchange="togglePhotoSelection('${photo.fileName}')">
+            </div>
+            <img src="${photo.filePath}" alt="${photo.fileName}">
+            <div class="photo-info">
+              <div>${photo.fileName}</div>
+              <div>${new Date(photo.dateModified).toLocaleString('pl-PL')}</div>
+            </div>
+          `;
+          photoDiv.onclick = (e) => {
+            if (e.target.type !== 'checkbox') {
+              openLightbox(allPhotos.indexOf(photo));
+            }
+          };
+          gallery.appendChild(photoDiv);
+        }
+        
+      } catch (error) {
+        gallery.innerHTML = `<div class="status error">Błąd: ${error.message}</div>`;
+      }
+    }
+    
+    // Toggle photo selection
+    function togglePhotoSelection(photoId) {
+      if (selectedPhotoIds.has(photoId)) {
+        selectedPhotoIds.delete(photoId);
+      } else {
+        selectedPhotoIds.add(photoId);
+      }
+      updateSelectionCount();
+    }
+    
+    // Update selection count
+    function updateSelectionCount() {
+      document.getElementById('selectedCount').textContent = selectedPhotoIds.size;
+      document.getElementById('generateBtn').disabled = selectedPhotoIds.size === 0;
+    }
+    
+    // Select all photos
+    function selectAll() {
+      allPhotos.forEach(photo => {
+        selectedPhotoIds.add(photo.fileName);
+        const checkbox = document.getElementById(`photo-${photo.fileName}`);
+        if (checkbox) checkbox.checked = true;
+      });
+      updateSelectionCount();
+    }
+    
+    // Deselect all photos
+    function deselectAll() {
+      selectedPhotoIds.clear();
+      allPhotos.forEach(photo => {
+        const checkbox = document.getElementById(`photo-${photo.fileName}`);
+        if (checkbox) checkbox.checked = false;
+      });
+      updateSelectionCount();
+    }
+    
+    // Generate album PDF
+    async function generateAlbum() {
+      if (selectedPhotoIds.size === 0) return;
+      
+      const generateBtn = document.getElementById('generateBtn');
+      const originalText = generateBtn.textContent;
+      generateBtn.disabled = true;
+      generateBtn.innerHTML = '<span class="loading"></span> Generowanie...';
+      
+      try {
+        // Convert selected photo fileNames to full paths
+        const photoPaths = Array.from(selectedPhotoIds).map(fileName => `/photos/${fileName}`);
+        
+        const response = await fetch(`${API_BASE}/api/photos/album`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ photoPaths: photoPaths })
+        });
+        
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Błąd generowania albumu');
+        }
+        
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Album_Mai_${new Date().toISOString().slice(0,10)}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        generateBtn.textContent = '✓ Pobrano!';
+        setTimeout(() => {
+          generateBtn.textContent = originalText;
+          generateBtn.disabled = false;
+        }, 2000);
+        
+      } catch (error) {
+        alert(`Błąd: ${error.message}`);
+        generateBtn.textContent = originalText;
+        generateBtn.disabled = false;
+      }
+    }
+    
+    // Lightbox functions
+    function openLightbox(index) {
+      currentLightboxIndex = index;
+      const lightbox = document.getElementById('lightbox');
+      const lightboxImage = document.getElementById('lightbox-image');
+      const photo = allPhotos[currentLightboxIndex];
+      
+      lightboxImage.src = photo.filePath;
+      lightboxImage.alt = photo.fileName;
+      updateLightboxCounter();
+      lightbox.classList.add('active');
+      document.body.style.overflow = 'hidden';
+    }
+    
+    function closeLightbox() {
+      const lightbox = document.getElementById('lightbox');
+      lightbox.classList.remove('active');
+      setTimeout(() => {
+        document.body.style.overflow = '';
+      }, 300);
+    }
+    
+    function navigateLightbox(direction) {
+      currentLightboxIndex += direction;
+      if (currentLightboxIndex < 0) currentLightboxIndex = allPhotos.length - 1;
+      if (currentLightboxIndex >= allPhotos.length) currentLightboxIndex = 0;
+      
+      const lightboxImage = document.getElementById('lightbox-image');
+      const photo = allPhotos[currentLightboxIndex];
+      
+      lightboxImage.style.opacity = '0';
+      
+      setTimeout(() => {
+        lightboxImage.src = photo.filePath;
+        lightboxImage.alt = photo.fileName;
+        lightboxImage.style.opacity = '1';
+        updateLightboxCounter();
+      }, 150);
+    }
+    
+    function updateLightboxCounter() {
+      const counter = document.getElementById('lightbox-counter');
+      counter.textContent = `${currentLightboxIndex + 1} / ${allPhotos.length}`;
+    }
+    
+    // Keyboard navigation
+    document.addEventListener('keydown', (e) => {
+      const lightbox = document.getElementById('lightbox');
+      if (lightbox.classList.contains('active')) {
+        if (e.key === 'Escape') closeLightbox();
+        if (e.key === 'ArrowLeft') navigateLightbox(-1);
+        if (e.key === 'ArrowRight') navigateLightbox(1);
+      }
+    });
+    
+    // Close lightbox on background click
+    document.getElementById('lightbox').addEventListener('click', (e) => {
+      if (e.target.id === 'lightbox') closeLightbox();
+    });
+    
+    // Load photos on page load
+    loadPhotos();
+  </script>
+</body>
+</html>
